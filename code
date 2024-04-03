@@ -2,76 +2,73 @@ import pandas as pd
 import numpy as np
 import math
 
-cnt_pts = [3, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
-curr = 0
+num_pts = [3, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+index = 0
 
 
-def f(x):
+def function(x):
     return 2 * x - math.cos(x)
     # return 2*x - np.cos(x)
 
 
-def d_f(x, n):
-    if n == 1:
-        return f(x)
-    elif n == 2:
-        return 2 * x + 1 / (x + 5)
-    elif n == 3:
-        return 2 - 1 / pow(x + 5, 2)
+def derivative_function(x, n):
+    if n == 3:
+        return -math.sin(x)
     else:
-        return pow(-1, n) * math.factorial(n - 2) / pow(x + 5, n - 1)
+        return math.cos(x + ((n - 2) * math.pi) / 2)
 
 
-def L(x):
-    pts = list(np.linspace(0.5, 1, cnt_pts[curr]))
-    res = 0
-    for i in range(0, cnt_pts[curr]):
-        multy = f(pts[i])
-        for j in range(0, cnt_pts[curr]):
+
+def lagrange_polynomial(x):
+    points = list(np.linspace(0.5, 1, num_pts[index]))
+    result = 0
+    for i in range(0, num_pts[index]):
+        product = function(points[i])
+        for j in range(0, num_pts[index]):
             if j != i:
-                multy *= ((x - pts[j]) / (pts[i] - pts[j]))
-        res += multy
-    return res
+                product *= ((x - points[j]) / (points[i] - points[j]))
+        result += product
+    return result
 
 
-def norm(func):
-    return max(abs(func(x)) for x in np.linspace(0.5, 1, 1000))
+def norm(function):
+    return max(abs(function(x)) for x in np.linspace(0.5, 1, 1000))
 
 
-def abs_error(func1, func2):
+def absolute_error(func1, func2):
     return max(abs(func1(x) - func2(x)) for x in np.linspace(0.5, 1, 1000))
 
 
-def rel_error(func1, func2):
-    return ((abs_error(func1, func2)) / norm(func2)) * 100
+def relative_error(func1, func2):
+    return ((absolute_error(func1, func2)) / norm(func2)) * 100
 
 
-def theory_error(n):
-    return (0.5 ** (n + 1)) * max(abs(d_f(x, n + 1)) for x in np.linspace(0.5, 1, 1000)) / math.factorial(n + 1)
+def theoretical_error(n):
+    return (0.5 ** (n + 1)) * max(abs(derivative_function(x, n + 1)) for x in np.linspace(0.5, 1, 1000)) / math.factorial(n + 1)
 
 
-abs_e_mass = []
-rel_e_mass = []
-ter_e_mass = []
+absolute_error_list = []
+relative_error_list = []
+theoretical_error_list = []
 
-for k in range(0, len(cnt_pts)):
-    curr = k
-    abs_er = abs_error(L, f)
-    rel_er = rel_error(L, f)
-    th_er = theory_error(cnt_pts[k])
+for k in range(0, len(num_pts)):
+    index = k
+    abs_err = absolute_error(lagrange_polynomial, function)
+    rel_err = relative_error(lagrange_polynomial, function)
+    th_err = theoretical_error(num_pts[k])
 
-    abs_e_mass.append(abs_er)
-    rel_e_mass.append(rel_er)
-    ter_e_mass.append(th_er)
+    absolute_error_list.append(abs_err)
+    relative_error_list.append(rel_err)
+    theoretical_error_list.append(th_err)
 
-abs_df = pd.DataFrame(abs_e_mass, cnt_pts, columns=["Value"])
-rel_df = pd.DataFrame(rel_e_mass, cnt_pts, columns=["Value"])
-ter_df = pd.DataFrame(ter_e_mass, cnt_pts, columns=["Value"])
+abs_df = pd.DataFrame(absolute_error_list, num_pts, columns=["Value"])
+rel_df = pd.DataFrame(relative_error_list, num_pts, columns=["Value"])
+ter_df = pd.DataFrame(theoretical_error_list, num_pts, columns=["Value"])
 
-total_df = pd.DataFrame({"n": cnt_pts,
-                         "Абсолютная ошибка": abs_e_mass,
-                         "Относительная ошибка": rel_e_mass,
-                         "Теоретическая ошибка": ter_e_mass},
+total_df = pd.DataFrame({"n": num_pts,
+                         "Абсолютная ошибка": absolute_error_list,
+                         "Относительная ошибка": relative_error_list,
+                         "Теоретическая ошибка": theoretical_error_list},
                         )
 total_df.style.hide(axis="index")
 print(total_df)
