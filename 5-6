@@ -1,0 +1,126 @@
+import numpy as np
+from matplotlib import pyplot as plt
+
+
+def func_1(var):
+    return 2 * var + np.cos(var)
+
+
+def func_2(var):
+    return 2 - np.sin(var)
+
+
+def tridiagonal_solver(A, B, C, F):
+    """ 
+        A (list): Elements of the lower diagonal. 
+        B (list): Elements of the central diagonal. 
+        C (list): Elements of the upper diagonal. 
+        F (list): Vector. 
+    """
+    N = len(F)
+    alpha = np.zeros(N)
+    beta = np.zeros(N)
+    U = np.zeros(N)
+
+    alpha[1] = -C[0] / B[0] if B[0] != 0 else 0
+    beta[1] = F[0] / B[0] if B[0] != 0 else 0
+
+    for k in range(1, N - 1):
+        denominator = B[k] + A[k] * alpha[k]
+        alpha[k + 1] = -C[k] / denominator
+        beta[k + 1] = (F[k] - A[k] * beta[k]) / denominator
+
+    U[N - 1] = (F[N - 1] - A[N - 1] * beta[N - 1]) / (B[N - 1] + A[N - 1] * alpha[N - 1])
+
+    for k in range(N - , -1, -1):
+        U[k] = alpha[k + 1] * U[k + 1] + beta[k + 1]
+
+    return U
+
+
+def cubic_spline_interpolation(x_vals, y_vals, start_slope, end_slope):
+    n = len(x_vals) - 1
+    h = [x_vals[i + 1] - x_vals[i] for i in range(n)]
+
+    lower_diagonal = [0] * (n - 1)
+    central_diagonal = [2 * (h[i] + h[i + 1]) for i in range(n - 1)]
+    upper_diagonal = [0] * (n - 1)
+    F = [3 * ((y_vals[i + 2] - y_vals[i + 1]) / h[i + 1] - (y_vals[i + 1] - y_vals[i]) / h[i]) for i in range(n - 1)]
+
+    lower_diagonal.insert(0, 0)
+    lower_diagonal.append(0)
+    central_diagonal.insert(0, 1)
+    central_diagonal.append(1)
+    upper_diagonal.insert(0, 0)
+    upper_diagonal.append(0)
+    F.insert(0, start_slope)
+    F.append(end_slope)
+
+    slopes = list(tridiagonal_solver(lower_diagonal, central_diagonal, upper_diagonal, F))
+
+    a_values = [(slopes[i + 1] - slopes[i]) / (6 * h[i]) for i in range(n)]
+    b_values = [slopes[i] / 2 for i in range(n)]
+    c_values = [(y_vals[i + 1] - y_vals[i]) / h[i] - h[i] * (2 * slopes[i] + slopes[i + 1]) / 6 for i in range(n)]
+    d_values = [y_vals[i] for i in range(n)]
+
+    return a_values, b_values, c_values, d_values
+
+
+def value_at_interpolation_point(interpolation_point, x_vals, a_values, b_values, c_values, d_values):
+    n = len(x_vals) - 1
+    for i in range(n):
+        if x_vals[i] <= interpolation_point <= x_vals[i + 1]:
+            h = interpolation_point - x_vals[i]
+            return d_values[i] + c_values[i] * h + b_values[i] * h ** 2 + a_values[i] * h ** 3
+    return None
+
+
+def interpolate_spline_points(x_vals, y_vals, x_interp, a_values, b_values, c_values, d_values):
+    n = len(x_vals) - 1
+    y_interp = []
+
+    for xi in x_interp:
+        for i in range(n):
+            if x_vals[i] <= xi <= x_vals[i + 1]:
+                h = xi - x_vals[i]
+                yi = d_values[i] + c_values[i] * h + b_values[i] * h ** 2 + a_values[i] * h ** 3
+                y_interp.append(yi)
+                break
+
+    return y_interp
+a, b = 0.1, 0.6
+num_points = 6
+x = np.linspace(a, b, num_points)
+y = f(x)
+
+m0 = f_prime(a)
+mN = f_prime(b)
+
+a_coef, b_coef, c_coef, d_coef = cubic_spline_coefficients(x, y, m0, mN)
+
+x_interp = np.linspace(a, b, 1000)
+y_interp = interpolate_spline_points(x, y, x_interp, a_coef, b_coef, c_coef, d_coef)
+
+y_true = f(x_interp)
+abs_error = np.abs(y_true - y_interp)
+max_error = np.max(abs_error)
+
+print(f"Максимальная абсолютная ошибка интерполирования: {max_error}")
+
+plt.figure(figsize=(10, 6))
+plt.plot(x_interp, y_true, label='Исходная функция', color='blue')
+plt.plot(x_interp, y_interp, label='Интерполированный сплайн', linestyle='--', color='red')
+plt.scatter(x, y, label='Исходные данные', color='black')
+plt.xlabel('x')
+plt.ylabel('y')
+plt.title('Интерполяция функции с помощью кубического сплайна')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+specific_x = 0.57
+true_value = f(specific_x)
+spline_value = spline_value_at_point(specific_x, x, a_coef, b_coef, c_coef, d_coef)
+error_at_specific_x = abs(true_value - spline_value)
+
+print(f"Погрешность интерполирования в точке x = {specific_x}: {error_at_specific_x}")
